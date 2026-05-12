@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Lens - Custyle</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: { DEFAULT: '#7B3CFD', light: '#A66FFE', dark: '#5A1FD4' },
+        surface: { DEFAULT: '#0f0f14', card: '#1a1a24', border: '#2a2a3a' },
+      }
+    }
+  }
+}
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  body { font-family: 'Inter', sans-serif; }
+  .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+  .slide-up { animation: slideUp 0.6s ease-out forwards; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .swatch { transition: transform 0.2s; }
+  .swatch:hover { transform: scale(1.1); }
+  .axis-bar { transition: width 0.8s ease-out; }
+  .progress-dot { animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  .drop-zone.dragover { border-color: #7B3CFD; background: rgba(123,60,253,0.08); }
+</style>
+</head>
+<body class="bg-surface text-gray-100 min-h-screen">
+
+<!-- Header -->
+<header class="border-b border-surface-border px-6 py-4">
+  <div class="max-w-5xl mx-auto flex items-center gap-3">
+    <div class="w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">BL</div>
+    <h1 class="text-lg font-semibold text-white">Brand Lens</h1>
+    <span class="text-xs text-gray-500 ml-2">by Custyle</span>
+    <span class="ml-auto text-xs text-gray-600">Brand-to-Merch Compiler</span>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-6 py-10">
+
+  <!-- Input Section -->
+  <section id="inputSection" class="mb-12">
+    <h2 class="text-2xl font-semibold text-white mb-2">Paste a URL or upload an image</h2>
+    <p class="text-gray-400 text-sm mb-6">Custyle will understand the style and turn it into merch-ready directions.</p>
+
+    <!-- URL Input -->
+    <div class="flex gap-3 mb-4">
+      <input id="urlInput" type="url" placeholder="https://example.com"
+        class="flex-1 bg-surface-card border border-surface-border rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand transition-colors">
+      <button id="analyzeUrlBtn" onclick="analyzeUrl()"
+        class="bg-brand hover:bg-brand-dark text-white font-medium px-6 py-3 rounded-xl transition-colors whitespace-nowrap">
+        Analyze
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="flex items-center gap-4 my-5">
+      <div class="flex-1 h-px bg-surface-border"></div>
+      <span class="text-gray-500 text-xs uppercase tracking-wider">or</span>
+      <div class="flex-1 h-px bg-surface-border"></div>
+    </div>
+
+    <!-- Image Upload -->
+    <div id="dropZone" class="drop-zone border-2 border-dashed border-surface-border rounded-xl p-10 text-center cursor-pointer hover:border-gray-500 transition-colors">
+      <input type="file" id="fileInput" accept="image/*" class="hidden">
+      <div class="text-gray-400">
+        <svg class="w-10 h-10 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <p class="text-sm">Drop an image here, or <span class="text-brand underline">browse</span></p>
+        <p class="text-xs text-gray-600 mt-1">Logo, screenshot, brand guide page</p>
+      </div>
+      <div id="imagePreview" class="hidden mt-4">
+        <img id="previewImg" class="max-h-40 mx-auto rounded-lg">
+        <button id="analyzeImgBtn" onclick="analyzeImage()"
+          class="mt-3 bg-brand hover:bg-brand-dark text-white font-medium px-6 py-2 rounded-xl transition-colors">
+          Analyze Image
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Progress -->
+  <section id="progressSection" class="hidden mb-8">
+    <div class="flex items-center gap-3 text-sm text-gray-400">
+      <div class="progress-dot w-2 h-2 bg-brand rounded-full"></div>
+      <span id="progressText">Starting analysis...</span>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section id="resultsSection" class="hidden space-y-8">
+
+    <!-- Colors -->
+    <div id="colorsCard" class="hidden bg-surface-card border border-surface-border rounded-2xl p-6">
+      <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Color Palette</h3>
+      <div id="colorSwatches" class="flex flex-wrap gap-3"></div>
+      <div id="colorMood" class="mt-4 flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- Typography & Visual -->
+    <div id="visualCard" class="hidden bg-surface-card border border-surface-border rounded-2xl p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Typography</h3>
+          <div id="typographyInfo"></div>
+        </div>
+        <div>
+          <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Visual Motifs</h3>
+          <div id="motifsInfo" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+      <div class="mt-6">
+        <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Imagery & Texture</h3>
+        <div id="imageryInfo" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+
+    <!-- Personality -->
+    <div id="personalityCard" class="hidden bg-surface-card border border-surface-border rounded-2xl p-6">
+      <div class="flex items-start justify-between mb-4">
+        <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider">Brand Personality</h3>
+        <span id="archetypeBadge" class="hidden text-xs font-medium px-3 py-1 rounded-full bg-brand/20 text-brand-light"></span>
+      </div>
+      <div id="essenceInfo" class="mb-4"></div>
+      <div id="personalityAxes" class="space-y-3"></div>
+      <div id="audienceInfo" class="mt-5"></div>
+      <div id="riskNotice" class="hidden mt-4 p-3 rounded-lg bg-yellow-900/20 border border-yellow-800/30 text-yellow-200 text-sm"></div>
+    </div>
+
+    <!-- Voice -->
+    <div id="voiceCard" class="hidden bg-surface-card border border-surface-border rounded-2xl p-6">
+      <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Brand Voice & Context</h3>
+      <div id="voiceInfo"></div>
+    </div>
+
+    <!-- Concepts -->
+    <div id="conceptsCard" class="hidden">
+      <h3 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-4">Merch Concept Directions</h3>
+      <div id="conceptsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+// ── File Upload ──
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+let selectedFile = null;
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('imagePreview').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Analyze URL ──
+function analyzeUrl() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+  resetResults();
+  showProgress('Checking the source...');
+  const es = new EventSource(`/api/brand-lens/stream?url=${encodeURIComponent(url)}`);
+  handleSSE(es);
+}
+
+// ── Analyze Image ──
+function analyzeImage() {
+  if (!selectedFile) return;
+  resetResults();
+  showProgress('Analyzing image...');
+
+  const formData = new FormData();
+  formData.append('image', selectedFile);
+
+  fetch('/api/brand-lens/stream', { method: 'POST', body: formData })
+    .then(response => {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      function read() {
+        reader.read().then(({ done, value }) => {
+          if (done) return;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try { handleEvent(JSON.parse(line.slice(6))); } catch {}
+            }
+          }
+          read();
+        });
+      }
+      read();
+    });
+}
+
+// ── SSE Handler ──
+function handleSSE(es) {
+  es.onmessage = (e) => {
+    try { handleEvent(JSON.parse(e.data)); } catch {}
+  };
+  es.onerror = () => { es.close(); hideProgress(); };
+}
+
+function handleEvent(event) {
+  document.getElementById('resultsSection').classList.remove('hidden');
+
+  switch (event.phase) {
+    case 'start': showProgress(event.message); break;
+    case 'metadata': showProgress(event.message); renderMetadata(event.data); break;
+    case 'colors': showProgress(event.message); renderColors(event.data); break;
+    case 'visual': showProgress(event.message); renderVisual(event.data); break;
+    case 'personality': showProgress(event.message); renderPersonality(event.data); break;
+    case 'voice': showProgress(event.message); renderVoice(event.data); break;
+    case 'concepts': showProgress(event.message); renderConcepts(event.data); break;
+    case 'complete': hideProgress(); break;
+    case 'error': hideProgress(); showError(event.message); break;
+  }
+}
+
+// ── Renderers ──
+
+function renderMetadata(data) {
+  if (data?.title) showProgress(`Reading: ${data.title.slice(0, 50)}...`);
+}
+
+function renderColors(data) {
+  const card = document.getElementById('colorsCard');
+  card.classList.remove('hidden');
+  card.classList.add('slide-up');
+
+  const container = document.getElementById('colorSwatches');
+  container.innerHTML = data.swatches.map(s => `
+    <div class="swatch flex flex-col items-center gap-1.5 cursor-pointer" title="${s.name}">
+      <div class="w-14 h-14 rounded-xl shadow-lg border border-white/10" style="background:${s.hex}"></div>
+      <span class="text-[10px] text-gray-400 font-mono">${s.hex}</span>
+    </div>
+  `).join('');
+}
+
+function renderVisual(data) {
+  const card = document.getElementById('visualCard');
+  card.classList.remove('hidden');
+  card.classList.add('slide-up');
+
+  // Typography
+  const typo = data.typography;
+  document.getElementById('typographyInfo').innerHTML = `
+    <p class="text-white text-sm mb-1"><span class="text-gray-400">Heading:</span> ${typo.headingStyle}</p>
+    <p class="text-white text-sm mb-2"><span class="text-gray-400">Body:</span> ${typo.bodyStyle}</p>
+    <div class="flex flex-wrap gap-1.5">
+      ${typo.fontPersonality.map(k => `<span class="text-xs px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-300">${k}</span>`).join('')}
+    </div>
+    <div class="mt-2 text-xs text-gray-500">Merch suitability: <span class="${typo.merchTextSuitability.level === 'high' ? 'text-green-400' : typo.merchTextSuitability.level === 'medium' ? 'text-yellow-400' : 'text-red-400'}">${typo.merchTextSuitability.level}</span> (${(typo.merchTextSuitability.score * 100).toFixed(0)}%)</div>
+  `;
+
+  // Motifs
+  document.getElementById('motifsInfo').innerHTML = data.motifs.map(m =>
+    `<span class="text-xs px-2.5 py-1 rounded-full bg-purple-900/30 text-purple-300">${m}</span>`
+  ).join('');
+
+  // Imagery + texture
+  const tags = [
+    ...(data.imagery?.photographyStyle ?? []),
+    ...(data.texture?.textureKeywords ?? []),
+    ...(data.texture?.materialFeeling ?? []),
+  ];
+  document.getElementById('imageryInfo').innerHTML = tags.map(t =>
+    `<span class="text-xs px-2.5 py-1 rounded-full bg-emerald-900/30 text-emerald-300">${t}</span>`
+  ).join('');
+
+  // Merge AI colors into palette
+  if (data.fullColorSystem) {
+    const all = [
+      ...(data.fullColorSystem.primary ?? []),
+      ...(data.fullColorSystem.secondary ?? []),
+      ...(data.fullColorSystem.accent ?? []),
+    ];
+    if (all.length > 0) {
+      const moodContainer = document.getElementById('colorMood');
+      const moods = data.fullColorSystem.colorMood ?? [];
+      moodContainer.innerHTML = moods.map(m =>
+        `<span class="text-xs px-2 py-0.5 rounded-full bg-pink-900/30 text-pink-300">${m}</span>`
+      ).join('');
+    }
+  }
+}
+
+function renderPersonality(data) {
+  const card = document.getElementById('personalityCard');
+  card.classList.remove('hidden');
+  card.classList.add('slide-up');
+
+  const e = data.essence;
+
+  // Essence summary
+  document.getElementById('essenceInfo').innerHTML = `
+    ${e.brandName ? `<p class="text-lg font-semibold text-white mb-1">${e.brandName}</p>` : ''}
+    <p class="text-sm text-gray-300 mb-2">${e.positioningSummary}</p>
+    <div class="flex flex-wrap gap-1.5 mb-3">
+      ${e.emotionalCore.map(k => `<span class="text-xs px-2 py-0.5 rounded-full bg-brand/20 text-brand-light font-medium">${k}</span>`).join('')}
+    </div>
+  `;
+
+  // Personality axes
+  const axes = e.personalityAxes;
+  const axisNames = {
+    premiumVsMass: ['Premium', 'Mass'],
+    seriousVsPlayful: ['Serious', 'Playful'],
+    establishedVsDisruptive: ['Established', 'Disruptive'],
+    minimalVsExpressive: ['Minimal', 'Expressive'],
+    calmVsEnergetic: ['Calm', 'Energetic'],
+    functionalVsEmotional: ['Functional', 'Emotional'],
+  };
+
+  document.getElementById('personalityAxes').innerHTML = Object.entries(axisNames).map(([key, [left, right]]) => {
+    const val = axes[key]?.score ?? 0;
+    const pct = ((val + 1) / 2) * 100;
+    return `
+      <div class="flex items-center gap-3 text-xs">
+        <span class="w-20 text-right text-gray-400">${left}</span>
+        <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden relative">
+          <div class="absolute top-0 left-1/2 w-px h-full bg-gray-600"></div>
+          <div class="axis-bar h-full bg-brand rounded-full" style="width:${pct}%"></div>
+        </div>
+        <span class="w-20 text-gray-400">${right}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Audience
+  document.getElementById('audienceInfo').innerHTML = `
+    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Audience</p>
+    <div class="flex flex-wrap gap-1.5">
+      ${e.audienceHypothesis.map(a => `<span class="text-xs px-2 py-0.5 rounded-full bg-cyan-900/30 text-cyan-300">${a}</span>`).join('')}
+    </div>
+  `;
+
+  // Risk notice
+  if (data.risk?.recommendedOwnershipState === 'restricted') {
+    const notice = document.getElementById('riskNotice');
+    notice.classList.remove('hidden');
+    notice.textContent = data.risk.userFacingNotice;
+  }
+}
+
+function renderVoice(data) {
+  const card = document.getElementById('voiceCard');
+  card.classList.remove('hidden');
+  card.classList.add('slide-up');
+
+  const v = data.voice;
+  const c = data.context;
+
+  document.getElementById('voiceInfo').innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Tone</p>
+        <div class="flex flex-wrap gap-1.5 mb-4">
+          ${v.tone.map(t => `<span class="text-xs px-2 py-0.5 rounded-full bg-orange-900/30 text-orange-300">${t}</span>`).join('')}
+        </div>
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Slogan Style</p>
+        <p class="text-sm text-gray-300 mb-4">${v.sloganStyle}</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Copy Directions</p>
+        <ul class="text-sm text-gray-300 space-y-1">
+          ${v.recommendedCopyDirections.map(d => `<li class="flex gap-2"><span class="text-brand">-</span> ${d}</li>`).join('')}
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Cultural References</p>
+        <div class="flex flex-wrap gap-1.5 mb-4">
+          ${(c.culturalReferences ?? []).map(r => `<span class="text-xs px-2 py-0.5 rounded-full bg-indigo-900/30 text-indigo-300">${r}</span>`).join('')}
+        </div>
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Category Conventions</p>
+        <ul class="text-sm text-gray-300 space-y-1">
+          ${(c.categoryConventions ?? []).map(d => `<li class="flex gap-2"><span class="text-gray-500">-</span> ${d}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+function renderConcepts(data) {
+  const card = document.getElementById('conceptsCard');
+  card.classList.remove('hidden');
+  card.classList.add('slide-up');
+
+  // Show archetype badge
+  if (data.archetypeLabel) {
+    const badge = document.getElementById('archetypeBadge');
+    badge.textContent = data.archetypeLabel;
+    badge.classList.remove('hidden');
+  }
+
+  const CATEGORY_ICONS = {
+    T_SHIRT: 'T', HOODIE: 'H', SWEATSHIRT: 'S', CANVAS_BAG: 'CB',
+    TOTE_BAG: 'TB', MUG: 'M', MOUSE_PAD: 'MP', PHONE_CASE: 'PC',
+    STICKER: 'St', NOTEBOOK: 'N',
+  };
+
+  document.getElementById('conceptsGrid').innerHTML = data.concepts.map((c, i) => `
+    <div class="bg-surface-card border border-surface-border rounded-2xl p-5 slide-up" style="animation-delay:${i * 0.1}s">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <h4 class="text-white font-semibold">${c.conceptName}</h4>
+          <p class="text-gray-400 text-xs mt-0.5">${c.subtitle}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-md border border-white/10" style="background:${c.baseColor}" title="${c.baseColorName}"></div>
+          <span class="text-[10px] font-mono text-gray-500 bg-surface px-1.5 py-0.5 rounded">${CATEGORY_ICONS[c.category] ?? c.category}</span>
+        </div>
+      </div>
+      <p class="text-sm text-gray-300 mb-3">${c.visualDirection}</p>
+      <p class="text-xs text-gray-500 mb-3">${c.whyItFitsBrand}</p>
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] text-gray-500 uppercase">${c.placement?.replace(/_/g, ' ')}</span>
+        <button class="text-xs text-brand hover:text-brand-light font-medium transition-colors">Customize this &rarr;</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Utils ──
+
+function showProgress(msg) {
+  const sec = document.getElementById('progressSection');
+  sec.classList.remove('hidden');
+  document.getElementById('progressText').textContent = msg;
+}
+
+function hideProgress() {
+  document.getElementById('progressSection').classList.add('hidden');
+}
+
+function resetResults() {
+  document.getElementById('resultsSection').classList.add('hidden');
+  ['colorsCard', 'visualCard', 'personalityCard', 'voiceCard', 'conceptsCard'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+    document.getElementById(id).classList.remove('slide-up');
+  });
+  document.getElementById('riskNotice').classList.add('hidden');
+  document.getElementById('archetypeBadge').classList.add('hidden');
+}
+
+function showError(msg) {
+  showProgress(`Error: ${msg}`);
+  document.getElementById('progressSection').querySelector('.progress-dot').style.background = '#ef4444';
+}
+
+// Enter key support
+document.getElementById('urlInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') analyzeUrl();
+});
+</script>
+</body>
+</html>
